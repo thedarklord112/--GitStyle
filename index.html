@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitStyle - Conventional Commits Generator</title>
+  <style>
+    :root {
+      --bg-main: #020617;
+      --bg-card: #0f172a;
+      --bg-card-hover: #1e293b;
+      --border-color: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --color-emerald: #10b981;
+    }
+    body, html {
+      margin: 0; padding: 0; width: 100%; min-height: 100vh;
+      background-color: var(--bg-main); color: var(--text-main);
+      font-family: system-ui, -apple-system, sans-serif;
+      box-sizing: border-box;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 16px; }
+    header { border-bottom: 1px solid var(--border-color); padding-bottom: 20px; margin-bottom: 32px; }
+    header h1 { margin: 0; font-size: 28px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+    header p { margin: 6px 0 0 0; font-size: 14px; color: var(--text-muted); }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+    @media (min-width: 768px) { .grid { grid-template-columns: 1fr 1fr; } }
+    .card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; }
+    .card h2 { margin: 0 0 16px 0; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    .type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .type-btn {
+      background-color: rgba(2, 6, 23, 0.4); border: 1px solid var(--border-color);
+      border-radius: 10px; padding: 12px; cursor: pointer; text-align: left;
+      transition: all 0.2s ease; display: flex; flex-direction: column; gap: 4px;
+    }
+    .type-btn:hover { border-color: #334155; background-color: var(--bg-card-hover); }
+    .type-btn.active { border-color: var(--color-emerald); background-color: rgba(16, 185, 129, 0.05); }
+    .type-head { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; color: var(--text-main); }
+    .type-desc { font-size: 11px; color: var(--text-muted); }
+    .input-field {
+      width: 100%; padding: 12px; background-color: rgba(2, 6, 23, 0.4);
+      border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-main);
+      font-size: 14px; box-sizing: border-box; margin-bottom: 16px;
+    }
+    .input-field:focus { outline: 1px solid var(--color-emerald); border-color: var(--color-emerald); }
+    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); text-transform: uppercase; }
+    .output-box {
+      background-color: #020617; border: 1px solid var(--border-color);
+      border-radius: 10px; padding: 16px; font-family: monospace; font-size: 14px;
+      color: #e2e8f0; min-height: 48px; display: flex; align-items: center;
+      word-break: break-all; margin-bottom: 16px;
+    }
+    .action-btn {
+      width: 100%; padding: 14px; background-color: var(--color-emerald);
+      color: var(--bg-main); border: none; border-radius: 10px; font-weight: 700;
+      font-size: 14px; cursor: pointer; transition: opacity 0.2s ease;
+    }
+    .action-btn:hover { opacity: 0.9; }
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; background-color: var(--color-emerald);
+      color: var(--bg-main); padding: 12px 24px; border-radius: 8px; font-weight: 600;
+      font-size: 14px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="toast" class="toast">Command copied to clipboard!</div>
+
+  <div class="container">
+    <header>
+      <h1>⚡ GitStyle</h1>
+      <p>Interactive Conventional Commits & Git Emoji generator for lazy developers</p>
+    </header>
+
+    <div class="grid">
+      <!-- Left side configuration area -->
+      <div class="card">
+        <h2>1. Select Commit Type</h2>
+        <div id="typeGrid" class="type-grid"></div>
+        
+        <div style="margin-top: 24px;">
+          <label for="scopeInput">Scope (Optional)</label>
+          <input type="text" id="scopeInput" class="input-field" placeholder="e.g. auth, api, ui" oninput="updatePreview()">
+          
+          <label for="descInput">Commit Message</label>
+          <input type="text" id="descInput" class="input-field" placeholder="What did you change?" oninput="updatePreview()">
+        </div>
+      </div>
+
+      <!-- Right side preview and generation area -->
+      <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <h2>2. Live Code Preview</h2>
+          <label>Formatted Message</label>
+          <div id="messagePreview" class="output-box">Select a type and type a message...</div>
+          
+          <label>Full Git Command</label>
+          <div id="commandPreview" class="output-box">git commit -m "..."</div>
+        </div>
+
+        <button class="action-btn" onclick="copyCommand()">Copy Git Command</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const commitTypes = [
+      { type: 'feat', emoji: '✨', label: 'Feature', desc: 'A new feature for the app' },
+      { type: 'fix', emoji: '🐛', label: 'Bug Fix', desc: 'A bug fix implementation' },
+      { type: 'docs', emoji: '📝', label: 'Documentation', desc: 'Documentation only changes' },
+      { type: 'style', emoji: '💄', label: 'Styling', desc: 'Code style, formatting, CSS' },
+      { type: 'refactor', emoji: '♻️', label: 'Refactor', desc: 'Code change that neither fixes nor adds' },
+      { type: 'perf', emoji: '⚡', label: 'Performance', desc: 'Code change that improves performance' },
+      { type: 'test', emoji: '✅', label: 'Testing', desc: 'Adding missing or correcting tests' },
+      { type: 'chore', emoji: '🔧', label: 'Chore', desc: 'Build process or auxiliary tool updates' }
+    ];
+
+    let selectedType = '';
+
+    function buildTypeGrid() {
+      const grid = document.getElementById('typeGrid');
+      grid.innerHTML = '';
+      
+      commitTypes.forEach(function(item) {
+        const btn = document.createElement('button');
+        btn.className = 'type-btn';
+        btn.id = 'type-' + item.type;
+        btn.onclick = function() { setCommitType(item.type); };
+        
+        btn.innerHTML = '<div class="type-head"><span>' + item.emoji + '</span><span>' + item.type + '</span></div><div class="type-desc">' + item.desc + '</div>';
+        grid.appendChild(btn);
+      });
+    }
+
+    function setCommitType(type) {
+      selectedType = type;
+      document.querySelectorAll('.type-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+      });
+      const activeBtn = document.getElementById('type-' + type);
+      if (activeBtn) {
+        activeBtn.classList.add('active');
+      }
+      updatePreview();
+    }
+
+    function generateCommitString() {
+      if (!selectedType) return '';
+      
+      const item = commitTypes.find(function(c) { return c.type === selectedType; });
+      const scope = document.getElementById('scopeInput').value.trim();
+      const desc = document.getElementById('descInput').value.trim();
+      
+      if (!desc) return '';
+
+      var scopeString = '';
+      if (scope) {
+        scopeString = '(' + scope + ')';
+      }
+
+      return item.emoji + ' ' + item.type + scopeString + ': ' + desc;
+    }
+
+    function updatePreview() {
+      const commitMessage = generateCommitString();
+      const msgBox = document.getElementById('messagePreview');
+      const cmdBox = document.getElementById('commandPreview');
+
+      if (!commitMessage) {
+        msgBox.innerText = 'Select a type and type a message...';
+        cmdBox.innerText = 'git commit -m "..."';
+        return;
+      }
+
+      msgBox.innerText = commitMessage;
+      cmdBox.innerText = 'git commit -m "' + commitMessage + '"';
+    }
+
+    function copyCommand() {
+      const commitMessage = generateCommitString();
+      if (!commitMessage) return;
+
+      const fullCommand = 'git commit -m "' + commitMessage + '"';
+      
+      navigator.clipboard.writeText(fullCommand).then(function() {
+        const toast = document.getElementById('toast');
+        toast.style.opacity = '1';
+        setTimeout(function() {
+          toast.style.opacity = '0';
+        }, 2000);
+      });
+    }
+
+    buildTypeGrid();
+  </script>
+</body>
+</html>
