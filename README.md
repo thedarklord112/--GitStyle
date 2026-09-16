@@ -1,5 +1,6 @@
 # ⚡ GitStyle (Conventional Commits Generator)
 
+<img width="1332" height="800" alt="image" src="https://github.com/user-attachments/assets/68ee0874-a869-4b87-8d8e-a59cc2ad6e0d" />
 
 Every developer likes (or is required by their company) to keep their Git history organized using the Conventional Commits standard (e.g., `feat:`, `fix:`, `docs:`), but no one memorizes every single rule or which emoji matches each type of change.
 
